@@ -4,7 +4,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
-import websocket
+from manager import WebSocketManager
 
 templates = Jinja2Templates(
     directory='templates/'
@@ -17,6 +17,8 @@ app.mount(
     StaticFiles(directory="static"), name="static"
 )
 
+manager = WebSocketManager()
+
 @app.get("/")
 def root(request: Request):
     return templates.TemplateResponse(
@@ -27,4 +29,9 @@ def root(request: Request):
 
 @app.websocket('/ws')
 async def websocket_endpoint(websocket: WebSocket):
-    pass
+    await manager.connect(websocket=websocket)
+
+    while True:
+        message = await websocket.receive_json()
+
+        await manager.send_message(websocket=websocket, message=message)
