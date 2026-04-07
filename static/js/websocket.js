@@ -1,31 +1,67 @@
 const ws = new WebSocket("ws://localhost:8000/ws");
+const form = document.querySelector('form');
+const messagesDiv = document.getElementById('messages');
+const clientIdSpan = document.getElementById('client-id');
+
+// Create a unique identifier for each client
+const makeid = (length) => {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charactersLength = characters.length;
+    let counter = 0;
+
+    while (counter < length) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        counter += 1;
+    }
+
+    return result;
+};
+
+const clientIdentifier = makeid(6);
+clientIdSpan.innerText = clientIdentifier;
 
 ws.onopen = () => {
-    console.log('Connected to websocket Server');
-}
+    // Client is connected
+    console.log('Connected to WebSocket Server');
+    ws.send(JSON.stringify({
+        content: `${clientIdentifier} joined`,
+        client: clientIdentifier,
+        timestamp: new Date().getTime()
+    }));
+};
 
 ws.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    console.log(message);
-    //console.log(`Received message: ${message}`);
-}
+    // Receiving a message
+    const data = JSON.parse(event.data);
+    const newMessage = document.createElement('p');
+    newMessage.innerText = `${data.client} says ${data.message}`;
+    messagesDiv.appendChild(newMessage);
+
+    const hr = document.createElement('hr');
+    messagesDiv.appendChild(hr);
+};
 
 ws.onerror = (error) => {
-    console.error('Websocket Error:', error);
-}
+    console.error('WebSocket Error:', error);
+};
 
 ws.onclose = () => {
-    console.log('Websocket connection closed');
-}
+    console.log('WebSocket connection closed');
+};
 
-const form = document.querySelector('form');
-//console.log(form);
-form.addEventListener('submit', (event) => {
+form.addEventListener('submit', async (event) => {
+    // Submitting event
+    event.preventDefault();
+
     const formData = new FormData(form);
-
     const message = formData.get('message');
 
-    ws.send(JSON.stringify({type: 'text', content: message}));
+    ws.send(JSON.stringify({
+        content: message,
+        client: clientIdentifier,
+        timestamp: new Date().getTime()
+    }));
 
-    event.preventDefault();
+    form.reset();
 });

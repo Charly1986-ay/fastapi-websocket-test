@@ -1,6 +1,7 @@
+from sys import exc_info
 from unittest import async_case
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
@@ -29,9 +30,14 @@ def root(request: Request):
 
 @app.websocket('/ws')
 async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket=websocket)
+    await manager.connect(websocket)
 
     while True:
-        message = await websocket.receive_json()
+        try:
+            message = await websocket.receive_json()
+            print(f'Received message: {message}')
 
-        await manager.send_message(websocket=websocket, message=message)
+            for client in manager.connected_clients:
+                await manager.send_message(client, message)
+        except WebSocketDisconnect:
+            await manager.disconnecet(websocket=websocket)
